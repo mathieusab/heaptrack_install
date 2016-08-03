@@ -59,7 +59,6 @@ libqt5widgets5
 libqt5x11extras5-dev
 libqt5xml5
 libsparsehash-dev
-libunwind-dev
 libxcb-xinerama0-dev
 libxslt1.1
 libxslt1-dev
@@ -75,6 +74,7 @@ qttools5-dev
 qttools5-dev
 kdiagram
 "
+#libunwind7-dev
 scan () 
 {
 	echo > not_found
@@ -101,6 +101,7 @@ scan ()
 			fi
 		done
 		
+		# exception for kdiagram
 		if [ "$package_searched" = "kdiagram" ]
 		then
 			if [ -d $package_searched ]
@@ -111,6 +112,13 @@ scan ()
 				echo -e "\033[41mNOT FOUND\033[0m"
 				echo $package_searched >> not_found
 			fi
+
+		# exception for cmake
+		elif [ "$package_searched" = "cmake" ]
+		then
+			echo $package_searched >> not_found
+
+		# normal 
 		else
 
 			if [ $package_is_installed -eq 1 ] 
@@ -170,7 +178,7 @@ install_packages ()
 			echo "deb http://ftp.fr.debian.org/debian/ wheezy-backports main" >> /etc/apt/sources.list
 			echo "deb-src http://ftp.fr.debian.org/debian/ wheezy-backports main" >> /etc/apt/sources.list
 			sudo apt-get update
-			sudo apt-get install -y cmake
+			sudo apt-get install -y -t wheezy-backports cmake
 			
 			echo -e "\033[36mo-----------------------------------------------------o\033[0m"
 			echo
