@@ -185,8 +185,8 @@ scan
 # install these packages
 install_packages
 
-# New scan to check if all needed packages have been correctly installed
-scan
+## New scan to check if all needed packages have been correctly installed
+#scan
 
 # if all packages have been found then not_found will be empty
 if [ -s $not_found ]
