@@ -1,19 +1,51 @@
 #!/bin/bash
 
+#set -e
+
 clear
+
+if [ -f "done_once" ]
+then
+	echo "up-to-date"
+else
+	apt-get -y update && apt-get -y upgrade
+fi
+
+touch done_once
+echo "1" > done_once
+
+rm -R heaptrack
+rm -R build
 
 # required packages to check
 required="
-cmake
-cmake-extras
-dh-autoreconf
-elfutils
-extra-cmake-modules
 git
+cmake
+zlib1g-dev
+libunwind
+libunwind7
+libunwind7-dev
+elfutils
+libdwarf-dev
+dh-autoreconf
+build-essential
+gcc-4.4
+cpp
+libboost-all-dev
+qt5-default
+python2.7
+qtdeclarative4-kqtquickcharts-1
+qtscript5-dev
+qtscript5-dev
+qttools5-dev
+qttools5-dev
 kdelibs5-dev
+libxcb-xinerama0-dev
+cmake-extras
+kdelibs5-dev
+kdiagram
 kdoctools
 kio-dev
-libboost-all-dev
 libboost-date-time1.58.0
 libboost-filesystem1.58.0
 libboost-iostreams1.58.0
@@ -23,7 +55,6 @@ libdrm-amdgpu1
 libdrm-intel1
 libdrm-nouveau2
 libdrm-radeon1
-libdwarf-dev
 libelf-dev
 libkf5archive5
 libkf5archive-dev
@@ -63,18 +94,90 @@ libxcb-xinerama0-dev
 libxslt1.1
 libxslt1-dev
 libxslt1-dev
-python2.7
 python2.7-minimal
 qt-sdk
-qt5-default
 qtdeclarative4-kqtquickcharts-1
 qtscript5-dev
 qtscript5-dev
 qttools5-dev
 qttools5-dev
-kdiagram
+libc6-dev
+libpthread-stubs0-dev
+libpthread-stubs0
+gccxml
+mingw-w64-common
 "
-#libunwind7-dev
+# 
+# 
+# cmake-extras
+# 
+# 
+# 
+# kdelibs5-dev
+# kdiagram
+# kdoctools
+# kio-dev
+# 
+# libboost-date-time1.58.0
+# libboost-filesystem1.58.0
+# libboost-iostreams1.58.0
+# libboost-system1.58.0
+# libdrm2
+# libdrm-amdgpu1
+# libdrm-intel1
+# libdrm-nouveau2
+# libdrm-radeon1
+# 
+# libelf-dev
+# libkf5archive5
+# libkf5archive-dev
+# libkf5codecs5
+# libkf5codecs-dev
+# libkf5configcore5
+# libkf5config-dev
+# libkf5configgui5
+# libkf5configwidgets-dev
+# libkf5coreaddons-dev
+# libkf5guiaddons5
+# libkf5guiaddons-dev
+# libkf5i18n-dev
+# libkf5itemmodels-dev
+# libkf5kiocore5
+# libkf5threadweaver-dev
+# libpolkit-qt-1-dev
+# libpython2.7
+# libpython2.7-minimal
+# libpython2.7-stdlib
+# libqt5core5a
+# libqt5dbus5
+# libqt5gui5
+# libqt5network5
+# libqt5opengl5
+# libqt5opengl5-dev
+# libqt5printsupport5
+# libqt5sql5
+# libqt5svg5-dev
+# libqt5svg5-dev
+# libqt5test5
+# libqt5widgets5
+# libqt5x11extras5-dev
+# libqt5xml5
+# libsparsehash-dev
+# 
+# libxcb-xinerama0-dev
+# libxslt1.1
+# libxslt1-dev
+# libxslt1-dev
+# 
+# python2.7-minimal
+# qt-sdk
+# 
+# qtdeclarative4-kqtquickcharts-1
+# qtscript5-dev
+# qtscript5-dev
+# qttools5-dev
+# qttools5-dev
+
 scan () 
 {
 	echo > not_found
@@ -83,7 +186,7 @@ scan ()
 	echo -en "\033[36mextracting installed packages...\033[0m"
 	dpkg --get-selections > get-sel
 	sed -i 's/$/000/' get-sel
-	cat get-sel | grep "install000" | awk -F " " '{print $1}' > out_apt_list
+	cat get-sel | grep "install000" | awk -F " " '{print $1}' | awk -F ":" '{print $1}' > out_apt_list
 	echo -e "\033[36mdone\033[0m"
 
 	for package_searched in $required
@@ -113,10 +216,17 @@ scan ()
 				echo $package_searched >> not_found
 			fi
 
-		# exception for cmake
-		elif [ "$package_searched" = "cmake" ]
+		# exception for libunwind
+		elif [ "$package_searched" = "libunwind" ]
 		then
-			echo $package_searched >> not_found
+			if [ -d $package_searched ]
+			then
+				echo -e "\033[42mfound\033[0m"
+				echo $package_searched >> found
+			else
+				echo -e "\033[41mNOT FOUND\033[0m"
+				echo $package_searched >> not_found
+			fi	
 
 		# normal 
 		else
@@ -167,12 +277,23 @@ install_packages ()
 			sudo make install
 			cd ../..
 
+		# exception for libunwind
+		elif [ "$line" = "libunwind" ]
+		then
+		    	git clone git://git.sv.gnu.org/libunwind.git
+			cd libunwind
+			./autogen.sh
+			./configure
+			make
+			make install
+			cd ..
+
 		# exception for cmake
 		elif [ "$line" = "cmake" ]
 		then
 			echo
 			echo -e "\033[36mo-----------------------------------------------------o\033[0m"
-			echo -e "\033[46mInstall : $line\033[0m"
+			echo -e "\033[46mInstall : $package_searched\033[0m"
 			echo -e "\033[36mo-----------------------------------------------------o\033[0m"
 			echo " " >> /etc/apt/sources.list			
 			echo "deb http://ftp.fr.debian.org/debian/ wheezy-backports main" >> /etc/apt/sources.list
@@ -182,8 +303,8 @@ install_packages ()
 			
 			echo -e "\033[36mo-----------------------------------------------------o\033[0m"
 			echo
-
-		# normal installation
+		
+		# normal
 		else
 			echo
 			echo -e "\033[36mo-----------------------------------------------------o\033[0m"
@@ -191,7 +312,7 @@ install_packages ()
 			echo -e "\033[36mo-----------------------------------------------------o\033[0m"
 			sudo apt-get install -y $line
 			echo -e "\033[36mo-----------------------------------------------------o\033[0m"
-			echo
+echo
 		fi
 	done
 }
@@ -206,19 +327,14 @@ install_heaptrack ()
 	sudo make install
 }
 
-# search for packages not installed
+# 
 scan
 
-# install these packages
 install_packages
 
-## New scan to check if all needed packages have been correctly installed
-#scan
-
-# if all packages have been found then not_found will be empty
 if [ -s $not_found ]
 then
-	echo -e "\033[36mNo more packages to install, start install heaptrack\033[0m"
+	echo -e "\033[36mno more packages to install, start install heaptrack\033[0m"
 	echo -e "\033[36mType \"y\" to start install\033[0m"
 	read q
 	if [ "$q" = "y" ]
